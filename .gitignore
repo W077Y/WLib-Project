@@ -1,0 +1,12 @@
+.*
+!.gitignore
+!.clang-format
+
+out
+build
+*.user
+logs
+
+
+toolchain/**
+!toolchain/*
