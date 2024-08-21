@@ -747,7 +747,6 @@ TEST_CASE()
   REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::little));
   REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::big));
 
-
   wlib::blob::StaticBlob<9> blob2(blob);
   blob.clear();
 
@@ -758,12 +757,43 @@ TEST_CASE()
   REQUIRE(blob2.get_total_number_of_bytes() == 9);
   REQUIRE(blob2.get_number_of_used_bytes() == 1);
   REQUIRE(blob2.get_number_of_free_bytes() == 8);
-  
+
   blob.insert_back(static_cast<uint64_t>(0x0102'0304'0506'0708));
 
   blob2 = blob;
   REQUIRE(blob2.get_total_number_of_bytes() == 9);
   REQUIRE(blob2.get_number_of_used_bytes() == 8);
   REQUIRE(blob2.get_number_of_free_bytes() == 1);
+}
 
+TEST_CASE()
+{
+  std::byte const buffer[9]{
+    std::byte(0x01), std::byte(0x02), std::byte(0xDE), std::byte(0xAD), std::byte(0x05), std::byte(0x05), std::byte(0xBE), std::byte(0xEF), std::byte(0x06),
+  };
+
+  wlib::blob::StaticBlob<27> blob;
+
+  REQUIRE(blob.get_total_number_of_bytes() == 27);
+  REQUIRE(blob.get_number_of_free_bytes() == 27);
+  REQUIRE(blob.get_number_of_used_bytes() == 0);
+
+  blob.insert_back(buffer);
+  blob.insert_front(buffer);
+  blob.insert(9, buffer);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 27);
+  REQUIRE(blob.get_number_of_free_bytes() == 0);
+  REQUIRE(blob.get_number_of_used_bytes() == 27);
+
+  REQUIRE_THROWS(blob.insert_back(buffer));
+  REQUIRE_THROWS(blob.insert_front(buffer));
+  REQUIRE_THROWS(blob.insert(9, buffer));
+
+  REQUIRE_THROWS(blob.insert_back(static_cast<uint16_t>(0), std::endian::little));
+  REQUIRE_THROWS(blob.insert_back(static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.insert_front(static_cast<uint16_t>(0), std::endian::little));
+  REQUIRE_THROWS(blob.insert_front(static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.insert(9, static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.insert(9, static_cast<uint16_t>(0), std::endian::little));
 }
