@@ -2,8 +2,8 @@
 #include <ut_catch.hpp>
 #include <wlib.hpp>
 
-int tst_fnc_1(float val) { return val * 3; }
-int tst_fnc_2(float val) { return val * 2; }
+int tst_fnc_1(float val) { return static_cast<int>(val * 3); }
+int tst_fnc_2(float val) {return static_cast<int>(val * 2); }
 
 TEST_CASE()
 {

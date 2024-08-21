@@ -23,13 +23,13 @@ TEST_CASE()
   std::byte*           buffer_end   = buffer + sizeof(buffer);
   std::span<std::byte> buffer_span{ buffer };
   {
-    wlib::blob::MemoryBlob blob{ buffer_begin, buffer_end };
+    wlib::blob::MemoryBlob blob{ { buffer_begin, buffer_end } };
     REQUIRE(blob.get_total_number_of_bytes() == 30);
     REQUIRE(blob.get_number_of_free_bytes() == 30);
     REQUIRE(blob.get_number_of_used_bytes() == 0);
   }
   {
-    wlib::blob::MemoryBlob blob{ buffer_begin, sizeof(buffer) };
+    wlib::blob::MemoryBlob blob{ { buffer_begin, sizeof(buffer) } };
     REQUIRE(blob.get_total_number_of_bytes() == 30);
     REQUIRE(blob.get_number_of_free_bytes() == 30);
     REQUIRE(blob.get_number_of_used_bytes() == 0);
@@ -47,13 +47,7 @@ TEST_CASE()
     REQUIRE(blob.get_number_of_used_bytes() == 0);
   }
   {
-    wlib::blob::MemoryBlob blob{ buffer_begin, buffer_end, buffer_begin + 3 };
-    REQUIRE(blob.get_total_number_of_bytes() == 30);
-    REQUIRE(blob.get_number_of_free_bytes() == 27);
-    REQUIRE(blob.get_number_of_used_bytes() == 3);
-  }
-  {
-    wlib::blob::MemoryBlob blob{ buffer_begin, sizeof(buffer), 3 };
+    wlib::blob::MemoryBlob blob{ { buffer_begin, sizeof(buffer) }, 3 };
     REQUIRE(blob.get_total_number_of_bytes() == 30);
     REQUIRE(blob.get_number_of_free_bytes() == 27);
     REQUIRE(blob.get_number_of_used_bytes() == 3);
@@ -355,12 +349,19 @@ TEST_CASE()
 
   REQUIRE(blob.get_number_of_used_bytes() == 0);
   REQUIRE_THROWS(blob.insert(1, static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.insert(1, static_cast<uint16_t>(0), std::endian::little));
   REQUIRE(blob.get_number_of_used_bytes() == 0);
 
   blob.insert_back(static_cast<uint32_t>(0x00AA'BBEF), std::endian::big);
   blob.insert_front(static_cast<uint32_t>(0xDECC'DDAD), std::endian::big);
   blob.insert(4, static_cast<uint16_t>(0xBE00), std::endian::big);
   REQUIRE(blob.get_number_of_used_bytes() == 10);
+
+  REQUIRE_FALSE(blob.try_insert(1, std::span<std::byte>(&buffer[0], std::numeric_limits<std::size_t>::max())));
+  REQUIRE_FALSE(blob.try_insert_reverse(1, std::span<std::byte>(&buffer[0], std::numeric_limits<std::size_t>::max())));
+
+  REQUIRE_FALSE(blob.try_insert(0, std::span<std::byte>(&buffer[0], std::numeric_limits<std::size_t>::max())));
+  REQUIRE_FALSE(blob.try_insert_reverse(0, std::span<std::byte>(&buffer[0], std::numeric_limits<std::size_t>::max())));
 
   REQUIRE(blob.extract<uint16_t>(1, std::endian::little) == 0xDDCC);
   REQUIRE(blob.extract<uint32_t>(3, std::endian::big) == 0x0000'AABB);
@@ -376,6 +377,11 @@ TEST_CASE()
 
   REQUIRE(blob.get_number_of_used_bytes() == 0);
   REQUIRE_THROWS(blob.overwrite(0, static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.overwrite(0, static_cast<uint16_t>(0), std::endian::little));
+  REQUIRE_THROWS(blob.overwrite_back(static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.overwrite_back(static_cast<uint16_t>(0), std::endian::little));
+  REQUIRE_THROWS(blob.overwrite_front(static_cast<uint16_t>(0), std::endian::big));
+  REQUIRE_THROWS(blob.overwrite_front(static_cast<uint16_t>(0), std::endian::little));
   REQUIRE(blob.get_number_of_used_bytes() == 0);
   REQUIRE(blob.try_set_position(10));
   REQUIRE(blob.get_number_of_used_bytes() == 10);
@@ -389,6 +395,14 @@ TEST_CASE()
   REQUIRE(blob.extract<uint32_t>(3, std::endian::big) == 0x0000'AABB);
   REQUIRE(blob.extract_front<uint32_t>(std::endian::big) == 0xDEADBEEF);
   REQUIRE(blob.get_number_of_used_bytes() == 0);
+
+  blob.clear();
+  blob.adjust_position(10);
+  REQUIRE(blob.get_number_of_used_bytes() == 10);
+
+  std::byte dummy[6] = {
+    std::byte(0xAA), std::byte(0xBB), std::byte(0xCC), std::byte(0xDD), std::byte(0xEE), std::byte(0xFF),
+  };
 }
 
 TEST_CASE()
@@ -397,7 +411,7 @@ TEST_CASE()
     std::byte(0x01), std::byte(0x02), std::byte(0x03), std::byte(0x04), std::byte(0x05), std::byte(0x06),
   };
 
-  wlib::blob::MemoryBlob const blob{ buffer, sizeof(buffer), sizeof(buffer) };
+  wlib::blob::MemoryBlob const blob{ buffer, sizeof(buffer) };
 
   REQUIRE(blob.get_total_number_of_bytes() == 6);
   REQUIRE(blob.get_number_of_free_bytes() == 0);
@@ -417,9 +431,16 @@ TEST_CASE()
   REQUIRE(val_5 == 0x0504'0302);
   REQUIRE(val_6 == 0x0203'0405);
 
+  REQUIRE_THROWS(blob.read<uint32_t>(std::numeric_limits<std::size_t>::max(), std::endian::little));
+  REQUIRE_THROWS(blob.read<uint32_t>(std::numeric_limits<std::size_t>::max() - 4, std::endian::little));
+  REQUIRE_THROWS(blob.read<uint32_t>(std::numeric_limits<std::size_t>::max(), std::endian::big));
+  REQUIRE_THROWS(blob.read<uint32_t>(std::numeric_limits<std::size_t>::max() - 4, std::endian::big));
+
   REQUIRE_THROWS(blob.read<uint32_t>(3));
-  REQUIRE_THROWS(blob.read_front<uint64_t>());
-  REQUIRE_THROWS(blob.read_back<uint64_t>());
+  REQUIRE_THROWS(blob.read_front<uint64_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_front<uint64_t>(std::endian::big));
+  REQUIRE_THROWS(blob.read_back<uint64_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_back<uint64_t>(std::endian::big));
 }
 
 TEST_CASE()
@@ -428,7 +449,7 @@ TEST_CASE()
     std::byte(0x01), std::byte(0x02), std::byte(0x03), std::byte(0x04), std::byte(0x05), std::byte(0x06),
   };
 
-  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer), sizeof(buffer) };
+  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer) };
 
   REQUIRE(blob.get_total_number_of_bytes() == 6);
   REQUIRE(blob.get_number_of_free_bytes() == 0);
@@ -454,7 +475,7 @@ TEST_CASE()
 {
   std::byte buffer[6]{};
 
-  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer) };
+  wlib::blob::MemoryBlob blob{ buffer };
 
   REQUIRE(blob.get_total_number_of_bytes() == 6);
   REQUIRE(blob.get_number_of_free_bytes() == 6);
@@ -485,7 +506,7 @@ TEST_CASE()
     std::byte(0x01), std::byte(0x02), std::byte(0xDE), std::byte(0xAD), std::byte(0x05), std::byte(0x05), std::byte(0xBE), std::byte(0xEF), std::byte(0x06),
   };
 
-  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer), sizeof(buffer) };
+  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer) };
 
   REQUIRE(blob.get_total_number_of_bytes() == 9);
   REQUIRE(blob.get_number_of_free_bytes() == 0);
@@ -515,7 +536,7 @@ TEST_CASE()
     std::byte(0x01), std::byte(0x02), std::byte(0xDE), std::byte(0xAD), std::byte(0x05), std::byte(0x05), std::byte(0xBE), std::byte(0xEF), std::byte(0x06),
   };
 
-  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer), sizeof(buffer) };
+  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer) };
 
   REQUIRE(blob.get_total_number_of_bytes() == 9);
   REQUIRE(blob.get_number_of_free_bytes() == 0);
@@ -535,4 +556,214 @@ TEST_CASE()
   REQUIRE_THROWS(blob.extract<uint32_t>(1));
   REQUIRE_THROWS(blob.extract_front<uint32_t>());
   REQUIRE_THROWS(blob.extract_back<uint32_t>());
+}
+
+TEST_CASE()
+{
+
+  std::byte buffer[9]{
+    std::byte(0x01), std::byte(0x02), std::byte(0xDE), std::byte(0xAD), std::byte(0x05), std::byte(0x05), std::byte(0xBE), std::byte(0xEF), std::byte(0x06),
+  };
+
+  wlib::blob::MemoryBlob blob{ buffer, sizeof(buffer) };
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_free_bytes() == 0);
+  REQUIRE(blob.get_number_of_used_bytes() == 9);
+
+  REQUIRE(buffer[2] == std::byte(0xDE));
+  blob.remove<uint16_t>(2);
+  REQUIRE(blob.get_number_of_used_bytes() == 7);
+  REQUIRE(buffer[2] == std::byte(0x05));
+  REQUIRE(buffer[6] == std::byte(0x06));
+
+  blob.remove_back<uint16_t>();
+  REQUIRE(blob.get_number_of_used_bytes() == 5);
+  REQUIRE(buffer[3] == std::byte(0x05));
+  REQUIRE(buffer[4] == std::byte(0xBE));
+
+  blob.remove_front<uint16_t>();
+  REQUIRE(blob.get_number_of_used_bytes() == 3);
+  REQUIRE(buffer[0] == std::byte(0x05));
+  REQUIRE(buffer[1] == std::byte(0x05));
+  REQUIRE(buffer[2] == std::byte(0xBE));
+
+  REQUIRE_THROWS(blob.remove<uint32_t>(2));
+  REQUIRE_THROWS(blob.remove_back<uint32_t>());
+  REQUIRE_THROWS(blob.remove_front<uint32_t>());
+}
+
+TEST_CASE()
+{
+  std::byte const buffer[9]{
+    std::byte(0x01), std::byte(0x02), std::byte(0xDE), std::byte(0xAD), std::byte(0x05), std::byte(0x05), std::byte(0xBE), std::byte(0xEF), std::byte(0x06),
+  };
+
+  wlib::blob::ConstMemoryBlob blob{ buffer };
+
+  std::span<std::byte const> spn_1 = blob.get_blob();
+  REQUIRE(spn_1.data() == buffer);
+  REQUIRE(spn_1.size() == 9);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 9);
+  REQUIRE(blob.get_number_of_processed_bytes() == 0);
+
+  uint16_t val1  = blob.extract_front<uint16_t>(std::endian::little);
+  uint16_t val2a = blob.read_front<uint16_t>(std::endian::big);
+  uint16_t val2  = blob.extract_front<uint16_t>(std::endian::big);
+
+  REQUIRE(val1 == 0x0201);
+  REQUIRE(val2a == val2);
+  REQUIRE(val2 == 0xDEAD);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 5);
+  REQUIRE(blob.get_number_of_processed_bytes() == 4);
+
+  uint16_t val3  = blob.extract_back<uint16_t>(std::endian::little);
+  uint16_t val4a = blob.read_back<uint16_t>(std::endian::big);
+  uint16_t val4  = blob.extract_back<uint16_t>(std::endian::big);
+
+  REQUIRE(val3 == 0x06EF);
+  REQUIRE(val4a == val4);
+  REQUIRE(val4 == 0x05BE);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 1);
+  REQUIRE(blob.get_number_of_processed_bytes() == 8);
+
+  std::span<std::byte const> spn_2 = blob.get_blob();
+  REQUIRE(spn_2.data() == buffer + 4);
+  REQUIRE(spn_2.size() == 1);
+
+  REQUIRE_THROWS(blob.extract_back<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.extract_back<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.extract_front<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.extract_front<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.read_back<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_back<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::big));
+
+  blob.reset();
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 9);
+  REQUIRE(blob.get_number_of_processed_bytes() == 0);
+
+  uint16_t val5 = blob.read<uint16_t>(2, std::endian::big);
+  uint16_t val6 = blob.read<uint16_t>(5, std::endian::little);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 9);
+  REQUIRE(blob.get_number_of_processed_bytes() == 0);
+
+  REQUIRE(val5 == 0xDEAD);
+  REQUIRE(val6 == 0xBE05);
+
+  blob.remove_front(3);
+  blob.remove_back(3);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 3);
+  REQUIRE(blob.get_number_of_processed_bytes() == 6);
+
+  REQUIRE_THROWS(blob.remove_front(4));
+  REQUIRE_THROWS(blob.remove_back(4));
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 3);
+  REQUIRE(blob.get_number_of_processed_bytes() == 6);
+
+  REQUIRE_THROWS(blob.read<uint32_t>(2, std::endian::big));
+  REQUIRE_THROWS(blob.read<uint32_t>(5, std::endian::little));
+
+  blob.reset();
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_remaining_bytes() == 9);
+  REQUIRE(blob.get_number_of_processed_bytes() == 0);
+
+  blob.remove_front(1);
+  blob.remove_back(1);
+
+  uint32_t val7 = 0xAABBCCDD;
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max(), val7, std::endian::big));
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max() - 1, val7, std::endian::big));
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max() - 5, val7, std::endian::big));
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max(), val7, std::endian::little));
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max() - 1, val7, std::endian::little));
+  REQUIRE_FALSE(blob.try_read(std::numeric_limits<std::size_t>::max() - 5, val7, std::endian::little));
+  REQUIRE(val7 == 0xAABBCCDD);
+}
+
+TEST_CASE()
+{
+
+  wlib::blob::StaticBlob<9> blob;
+  blob.insert_back(static_cast<uint32_t>(0xDEADBEEF), std::endian::big);
+  blob.insert(2, static_cast<uint16_t>(0x0505), std::endian::little);
+  blob.insert_front(static_cast<uint16_t>(0x0201), std::endian::little);
+  blob.insert_back(static_cast<uint8_t>(0x06));
+
+  std::span<std::byte const> spn_1 = blob.get_blob();
+  REQUIRE(spn_1.size() == 9);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_used_bytes() == 9);
+  REQUIRE(blob.get_number_of_free_bytes() == 0);
+
+  uint16_t val1  = blob.extract_front<uint16_t>(std::endian::little);
+  uint16_t val2a = blob.read_front<uint16_t>(std::endian::big);
+  uint16_t val2  = blob.extract_front<uint16_t>(std::endian::big);
+
+  REQUIRE(val1 == 0x0201);
+  REQUIRE(val2a == val2);
+  REQUIRE(val2 == 0xDEAD);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_used_bytes() == 5);
+  REQUIRE(blob.get_number_of_free_bytes() == 4);
+
+  uint16_t val3  = blob.extract_back<uint16_t>(std::endian::little);
+  uint16_t val4a = blob.read_back<uint16_t>(std::endian::big);
+  uint16_t val4  = blob.extract_back<uint16_t>(std::endian::big);
+
+  REQUIRE(val3 == 0x06EF);
+  REQUIRE(val4a == val4);
+  REQUIRE(val4 == 0x05BE);
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_used_bytes() == 1);
+  REQUIRE(blob.get_number_of_free_bytes() == 8);
+
+  std::span<std::byte const> spn_2 = blob.get_blob();
+  REQUIRE(spn_2.size() == 1);
+
+  REQUIRE_THROWS(blob.extract_back<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.extract_back<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.extract_front<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.extract_front<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.read_back<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_back<uint16_t>(std::endian::big));
+  REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::little));
+  REQUIRE_THROWS(blob.read_front<uint16_t>(std::endian::big));
+
+
+  wlib::blob::StaticBlob<9> blob2(blob);
+  blob.clear();
+
+  REQUIRE(blob.get_total_number_of_bytes() == 9);
+  REQUIRE(blob.get_number_of_used_bytes() == 0);
+  REQUIRE(blob.get_number_of_free_bytes() == 9);
+
+  REQUIRE(blob2.get_total_number_of_bytes() == 9);
+  REQUIRE(blob2.get_number_of_used_bytes() == 1);
+  REQUIRE(blob2.get_number_of_free_bytes() == 8);
+  
+  blob.insert_back(static_cast<uint64_t>(0x0102'0304'0506'0708));
+
+  blob2 = blob;
+  REQUIRE(blob2.get_total_number_of_bytes() == 9);
+  REQUIRE(blob2.get_number_of_used_bytes() == 8);
+  REQUIRE(blob2.get_number_of_free_bytes() == 1);
+
 }
