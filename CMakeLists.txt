@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (MSVC)
     add_compile_options(/W4)
+    #add_compile_options(/Wall)
 else()
     add_compile_options(-fprofile-arcs -ftest-coverage)
     add_link_options(-fprofile-arcs -ftest-coverage)
