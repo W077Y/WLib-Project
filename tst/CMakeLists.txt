@@ -5,5 +5,6 @@ set(TEST_MAIN_CPP "${CMAKE_CURRENT_LIST_DIR}/tst_main/tst_main.cpp" CACHE INTERN
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/CRC")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/BLOB")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Callback")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Container")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Publisher")
 
