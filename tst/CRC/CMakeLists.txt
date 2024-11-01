@@ -13,11 +13,11 @@ target_include_directories(${target_name}
 
 target_sources(${target_name}
  PRIVATE "${TEST_MAIN_CPP}"
- PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-CRC_8.cpp"
- PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-CRC_16_ccitt_false.cpp"
- PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-CRC_16_ccitt_zero.cpp"
- PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-CRC_32.cpp"
- PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-CRC_64_go_iso.cpp"
+ PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-crc_8.cpp"
+ PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-crc_16_ccitt_false.cpp"
+ PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-crc_16_ccitt_zero.cpp"
+ PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-crc_32.cpp"
+ PRIVATE "${CMAKE_CURRENT_LIST_DIR}/tst_wlib-crc_64_go_iso.cpp"
 )
 
 target_link_libraries(${target_name} PRIVATE UT_CATCH)

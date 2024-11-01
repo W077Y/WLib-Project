@@ -1,4 +1,4 @@
-#include <wlib-crc_16_ccitt.hpp>
+#include <wlib.hpp>
 #include <tst_input.hpp>
 #include <ut_catch.hpp>
 

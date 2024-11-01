@@ -1,4 +1,4 @@
-#include <wlib-crc_64_go_iso.hpp>
+#include <wlib.hpp>
 #include <tst_input.hpp>
 #include <ut_catch.hpp>
 
