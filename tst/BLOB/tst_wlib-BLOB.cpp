@@ -863,22 +863,25 @@ TEST_CASE()
   REQUIRE(ss == ss_out2.value());
 }
 
-wlib::blob::MemoryBlob&  my_space::operator<<(wlib::blob::MemoryBlob& blob, my_space::S const& s) { return blob << s.a << s.b << s.c; }
-template <typename T> T& my_space::operator>>(T& blob, my_space::S& s) { return blob >> s.a >> s.b >> s.c; }
-
-wlib::blob::MemoryBlob&  my_space::operator<<(wlib::blob::MemoryBlob& blob, my_space::SS const& ss) { return blob << ss.a << ss.b << ss.c << ss.d; }
-template <typename T> T& my_space::operator>>(T& blob, std::optional<my_space::SS>& ss)
+namespace my_space
 {
-  char   a;
-  int    b;
-  double c;
-  S      d;
+  wlib::blob::MemoryBlob&  operator<<(wlib::blob::MemoryBlob& blob, my_space::S const& s) { return blob << s.a << s.b << s.c; }
+  template <typename T> T& operator>>(T& blob, my_space::S& s) { return blob >> s.a >> s.b >> s.c; }
 
-  blob >> a >> b >> c >> d;
-  ss = SS(a, b, c, d);
+  wlib::blob::MemoryBlob&  operator<<(wlib::blob::MemoryBlob& blob, my_space::SS const& ss) { return blob << ss.a << ss.b << ss.c << ss.d; }
+  template <typename T> T& operator>>(T& blob, std::optional<my_space::SS>& ss)
+  {
+    char   a;
+    int    b;
+    double c;
+    S      d;
 
-  return blob;
-}
+    blob >> a >> b >> c >> d;
+    ss = SS(a, b, c, d);
+
+    return blob;
+  }
+}    // namespace my_space
 
 TEST_CASE()
 {
