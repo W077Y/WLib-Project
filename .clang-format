@@ -94,4 +94,4 @@ SpacesInAngles : false
 ColumnLimit: 160
 IndentWidth : 2
 
-Standard : c++17
+Standard : c++20

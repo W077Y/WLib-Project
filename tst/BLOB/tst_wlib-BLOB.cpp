@@ -4,7 +4,7 @@
 
 void print_buffer(wlib::blob::MemoryBlob const& blob, std::span<std::byte> const& buffer)
 {
-  for (std::byte entry : blob.get_blob())
+  for (std::byte entry : blob.get_span())
   {
     std::cout << static_cast<int>(entry) << ", ";
   }
@@ -68,7 +68,7 @@ TEST_CASE()
   REQUIRE(blob.get_number_of_free_bytes() == 30);
   REQUIRE(blob.get_number_of_used_bytes() == 0);
 
-  std::span<std::byte const> blob_span = blob.get_blob();
+  std::span<std::byte const> blob_span = blob.get_span();
 
   REQUIRE(&buffer[0] == blob_span.data());
 }
@@ -81,7 +81,7 @@ TEST_CASE()
   REQUIRE(blob.get_number_of_free_bytes() == 30);
   REQUIRE(blob.get_number_of_used_bytes() == 0);
 
-  std::span<std::byte> blob_span = blob.get_blob();
+  std::span<std::byte> blob_span = blob.get_span();
 
   REQUIRE(&buffer[0] == blob_span.data());
 }
@@ -600,7 +600,7 @@ TEST_CASE()
 
   wlib::blob::ConstMemoryBlob blob{ buffer };
 
-  std::span<std::byte const> spn_1 = blob.get_blob();
+  std::span<std::byte const> spn_1 = blob.get_span();
   REQUIRE(spn_1.data() == buffer);
   REQUIRE(spn_1.size() == 9);
 
@@ -632,7 +632,7 @@ TEST_CASE()
   REQUIRE(blob.get_number_of_remaining_bytes() == 1);
   REQUIRE(blob.get_number_of_processed_bytes() == 8);
 
-  std::span<std::byte const> spn_2 = blob.get_blob();
+  std::span<std::byte const> spn_2 = blob.get_span();
   REQUIRE(spn_2.data() == buffer + 4);
   REQUIRE(spn_2.size() == 1);
 
@@ -704,7 +704,7 @@ TEST_CASE()
   blob.insert_front(static_cast<uint16_t>(0x0201), std::endian::little);
   blob.insert_back(static_cast<uint8_t>(0x06));
 
-  std::span<std::byte const> spn_1 = blob.get_blob();
+  std::span<std::byte const> spn_1 = blob.get_span();
   REQUIRE(spn_1.size() == 9);
 
   REQUIRE(blob.get_total_number_of_bytes() == 9);
@@ -735,7 +735,7 @@ TEST_CASE()
   REQUIRE(blob.get_number_of_used_bytes() == 1);
   REQUIRE(blob.get_number_of_free_bytes() == 8);
 
-  std::span<std::byte const> spn_2 = blob.get_blob();
+  std::span<std::byte const> spn_2 = blob.get_span();
   REQUIRE(spn_2.size() == 1);
 
   REQUIRE_THROWS(blob.extract_back<uint16_t>(std::endian::little));
@@ -796,4 +796,111 @@ TEST_CASE()
   REQUIRE_THROWS(blob.insert_front(static_cast<uint16_t>(0), std::endian::big));
   REQUIRE_THROWS(blob.insert(9, static_cast<uint16_t>(0), std::endian::big));
   REQUIRE_THROWS(blob.insert(9, static_cast<uint16_t>(0), std::endian::little));
+}
+
+namespace my_space
+{
+  struct S
+  {
+    char   a;
+    int    b;
+    double c;
+
+    auto operator<=>(S const&) const = default;
+
+    friend wlib::blob::MemoryBlob&  operator<<(wlib::blob::MemoryBlob&, S const&);
+    template <typename T> friend T& operator>>(T&, S&);
+  };
+
+  class SS
+  {
+  public:
+    SS(char a, int b, double c, S s)
+        : a(a)
+        , b(b)
+        , c(c)
+        , d(s)
+    {
+    }
+
+    auto operator<=>(SS const&) const = default;
+
+  private:
+    char   a;
+    int    b;
+    double c;
+    S      d;
+
+    friend wlib::blob::MemoryBlob&  operator<<(wlib::blob::MemoryBlob&, SS const&);
+    template <typename T> friend T& operator>>(T&, std::optional<SS>&);
+  };
+}    // namespace my_space
+
+TEST_CASE()
+{
+  std::byte buffer[(sizeof(char) + sizeof(int) + sizeof(double)) * 3] = {};
+
+  wlib::blob::MemoryBlob blob{ buffer };
+
+  my_space::S  s  = { 's', 3, 3.14 };
+  my_space::SS ss = { 't', 4, 4.2, s };
+  blob << s << ss;
+
+  wlib::blob::ConstMemoryBlob c_blob{ buffer };
+
+  my_space::S                 s_out2;
+  std::optional<my_space::SS> ss_out2;
+  c_blob >> s_out2 >> ss_out2;
+
+  my_space::S                 s_out;
+  std::optional<my_space::SS> ss_out;
+  blob >> s_out >> ss_out;
+
+  REQUIRE(s == s_out);
+  REQUIRE(s == s_out2);
+
+  REQUIRE(ss == ss_out.value());
+  REQUIRE(ss == ss_out2.value());
+}
+
+wlib::blob::MemoryBlob&  my_space::operator<<(wlib::blob::MemoryBlob& blob, my_space::S const& s) { return blob << s.a << s.b << s.c; }
+template <typename T> T& my_space::operator>>(T& blob, my_space::S& s) { return blob >> s.a >> s.b >> s.c; }
+
+wlib::blob::MemoryBlob&  my_space::operator<<(wlib::blob::MemoryBlob& blob, my_space::SS const& ss) { return blob << ss.a << ss.b << ss.c << ss.d; }
+template <typename T> T& my_space::operator>>(T& blob, std::optional<my_space::SS>& ss)
+{
+  char   a;
+  int    b;
+  double c;
+  S      d;
+
+  blob >> a >> b >> c >> d;
+  ss = SS(a, b, c, d);
+
+  return blob;
+}
+
+TEST_CASE()
+{
+  std::byte buffer[(sizeof(char) + sizeof(int) + sizeof(double)) * 3] = {};
+
+  wlib::blob::MemoryBlob blob{ buffer };
+
+  my_space::S s[3] = { { 's', 3, 3.14 }, { 't', 4, 6.28 }, { 'u', 5, 9.42 } };
+
+  blob << std::span<my_space::S const>(s);
+
+  wlib::blob::ConstMemoryBlob c_blob{ buffer };
+
+  my_space::S s_out2[3];
+  c_blob >> std::span<my_space::S>(s_out2);
+
+  my_space::S s_out[3];
+  blob >> std::span<my_space::S>(s_out);
+
+  for (std::size_t i = 0; i < 3; i++)
+  {
+    REQUIRE(s[i] == s_out[i]);
+    REQUIRE(s[i] == s_out2[i]);
+  }
 }

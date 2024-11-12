@@ -1,3 +1,3 @@
 [submodule "wlib"]
 	path = wlib
-	url = git@github.com:W077Y/WLib.git
+	url = https://github.com/W077Y/WLib.git
