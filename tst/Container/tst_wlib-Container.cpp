@@ -59,3 +59,25 @@ TEST_CASE()
   REQUIRE(std::ranges::count(buffer, 0) == 0);
   REQUIRE(std::ranges::count(buffer, 1) == 3);
 }
+
+TEST_CASE()
+{
+  using T = wlib::container::circular_buffer_t<int, 5>;
+
+  T buffer;
+
+  int sum = 0;
+  for (auto entry : buffer)
+    sum += entry;
+
+  REQUIRE(sum == 0);
+
+  for (std::size_t i = 0; i < 100; i++)
+    buffer.push(1);
+
+  sum = 0;
+  for (auto entry : buffer)
+    sum += entry;
+
+  REQUIRE(sum == 5);
+}

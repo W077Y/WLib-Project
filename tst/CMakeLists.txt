@@ -8,4 +8,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/BLOB")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Callback")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Container")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Publisher")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/IO")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Memory_Storage")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Provider")
 
