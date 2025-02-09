@@ -907,3 +907,47 @@ TEST_CASE()
     REQUIRE(s[i] == s_out2[i]);
   }
 }
+
+TEST_CASE()
+{
+
+  std::array<std::byte, 10> ref_1 = {
+    std::byte(0xCC), std::byte(0xCC), std::byte(0xDD), std::byte(0xDD), std::byte(0xDD),
+    std::byte(0xCC), std::byte(0xAA), std::byte(0xBB), std::byte(0xBB), std::byte(0xBB),
+  };
+  std::array<std::byte, 10> ref_2 = {
+    std::byte(0x0C), std::byte(0x0C), std::byte(0x0D), std::byte(0x0D), std::byte(0x0D),
+    std::byte(0x0C), std::byte(0x0A), std::byte(0x0B), std::byte(0x0B), std::byte(0x0B),
+  };
+
+  std::array<std::byte, 10> mem;
+  wlib::blob::MemoryBlob    blob{ mem };
+
+  REQUIRE(blob.try_insert_back(std::byte(0xAA)));
+  REQUIRE(blob.try_insert_back(std::byte(0xBB), 3));
+  REQUIRE(blob.try_insert_front(std::byte(0xCC), 3));
+  REQUIRE(blob.try_insert(2, std::byte(0xDD), 3));
+
+  REQUIRE(blob.try_insert(2, std::byte(0xDD), 0));
+
+  REQUIRE(!blob.try_insert_back(std::byte(0x00), 3));
+  REQUIRE(!blob.try_insert_front(std::byte(0x00), 3));
+  REQUIRE(!blob.try_insert(5, std::byte(0x00), 3));
+
+  REQUIRE(mem == ref_1);
+
+  blob.clear();
+
+  REQUIRE_NOTHROW(blob.insert_back(std::byte(0x0A)));
+  REQUIRE_NOTHROW(blob.insert_back(std::byte(0x0B), 3));
+  REQUIRE_NOTHROW(blob.insert_front(std::byte(0x0C), 3));
+  REQUIRE_NOTHROW(blob.insert(2, std::byte(0x0D), 3));
+
+  REQUIRE_NOTHROW(blob.insert(2, std::byte(0x0D), 0));
+
+  REQUIRE_THROWS(blob.insert_back(std::byte(0x00), 3));
+  REQUIRE_THROWS(blob.insert_front(std::byte(0x00), 3));
+  REQUIRE_THROWS(blob.insert(5, std::byte(0x00), 3));
+
+  REQUIRE(mem == ref_2);
+}
