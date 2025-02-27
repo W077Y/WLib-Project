@@ -11,4 +11,5 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Publisher")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/IO")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Memory_Storage")
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/Provider")
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/String-Builder")
 

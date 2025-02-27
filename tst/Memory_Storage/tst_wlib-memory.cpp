@@ -1,4 +1,4 @@
-#include <exception>
+﻿#include <exception>
 #include <iostream>
 #include <ut_catch.hpp>
 #include <wlib.hpp>
@@ -13,6 +13,9 @@ namespace
     }
 
     // Inherited via Non_Volatile_Memory_Interface
+    virtual std::size_t capacity() const { return this->mem.size(); };
+    virtual std::size_t alignment() const { return 1; };
+
     void write(std::size_t add, std::span<std::byte const> data) override
     {
       std::size_t const end = add + data.size();
