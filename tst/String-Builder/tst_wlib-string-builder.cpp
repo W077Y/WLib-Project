@@ -4,11 +4,10 @@
 //
 #include <wlib.hpp>
 
-
 namespace test_float_value_format_t
 {
   using test_t = wlib::Internal::floating_point_number_format_t;
-  
+
   namespace static_test_1
   {
     auto constexpr fmt = test_t{ "+7.3" };
@@ -20,7 +19,7 @@ namespace test_float_value_format_t
   namespace static_test_2
   {
     auto constexpr fmt = test_t{ "25.23f" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 25);
     static_assert(fmt.get_precision() == 23);
     static_assert(fmt.get_format() == std::chars_format::fixed);
@@ -28,7 +27,7 @@ namespace test_float_value_format_t
   namespace static_test_3
   {
     auto constexpr fmt = test_t{ "25.23E" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 25);
     static_assert(fmt.get_precision() == 23);
     static_assert(fmt.get_format() == std::chars_format::scientific);
@@ -36,7 +35,7 @@ namespace test_float_value_format_t
   namespace static_test_4
   {
     auto constexpr fmt = test_t{ ".23E" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 0);
     static_assert(fmt.get_precision() == 23);
     static_assert(fmt.get_format() == std::chars_format::scientific);
@@ -44,7 +43,7 @@ namespace test_float_value_format_t
   namespace static_test_5
   {
     auto constexpr fmt = test_t{ "E" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 0);
     static_assert(fmt.get_precision() == -1);
     static_assert(fmt.get_format() == std::chars_format::scientific);
@@ -52,7 +51,7 @@ namespace test_float_value_format_t
   namespace static_test_6
   {
     auto constexpr fmt = test_t{ "" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 0);
     static_assert(fmt.get_precision() == -1);
     static_assert(fmt.get_format() == std::chars_format::general);
@@ -60,7 +59,7 @@ namespace test_float_value_format_t
   namespace static_test_7
   {
     auto constexpr fmt = test_t{ " 17.9X" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 17);
     static_assert(fmt.get_precision() == 9);
     static_assert(fmt.get_format() == std::chars_format::hex);
@@ -81,7 +80,7 @@ namespace test_int_value_format_t
   namespace static_test_2
   {
     auto constexpr fmt = test_t{ " 7" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 7);
     static_assert(fmt.get_base() == 10);
   }    // namespace static_test_2
@@ -95,28 +94,11 @@ namespace test_int_value_format_t
   namespace static_test_4
   {
     auto constexpr fmt = test_t{ "12b" };
-    static_assert(fmt.get_sign() == test_t::sign_mode_t::none);
+    static_assert(fmt.get_sign() == test_t::sign_mode_t::negativ_only);
     static_assert(fmt.get_width() == 12);
     static_assert(fmt.get_base() == 2);
   }    // namespace static_test_4
 }    // namespace test_int_value_format_t
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 TEST_CASE()
 {
@@ -128,7 +110,7 @@ TEST_CASE()
 
 TEST_CASE()
 {
-  constexpr std::size_t       buffer_size = 120;
+  constexpr std::size_t            buffer_size = 120;
   wlib::StringBuilder<buffer_size> builder     = {};
 
   REQUIRE(builder.get_remaining_chars() == buffer_size);
@@ -167,7 +149,7 @@ TEST_CASE()
 
 TEST_CASE()
 {
-  constexpr std::size_t       buffer_size = 120;
+  constexpr std::size_t            buffer_size = 120;
   wlib::StringBuilder<buffer_size> builder     = {};
 
   using wlib::fmt;
@@ -206,3 +188,42 @@ TEST_CASE()
 
   REQUIRE(builder.as_string_view() == ref);
 }
+
+TEST_CASE()
+{
+  constexpr std::size_t            buffer_size = 120;
+  wlib::StringBuilder<buffer_size> builder     = {};
+
+  using wlib::fmt;
+
+  builder << fmt("+9.3f", 10.5f) << "\n";
+  builder << fmt("-9.3f", -10.5f) << "\n";
+  builder << fmt("9.3f", 10.5) << "\n";
+
+  //                               "123456789"
+  constexpr std::string_view ref = "  +10.500\n"
+                                   "  -10.500\n"
+                                   "   10.500\n";
+  REQUIRE(builder.as_string_view() == ref);
+}
+
+TEST_CASE()
+{
+  constexpr std::size_t            buffer_size = 120;
+  wlib::StringBuilder<buffer_size> builder     = {};
+
+  using wlib::fmt;
+
+  builder << fmt("+9", 105) << "\n";
+  builder << fmt("-9", -105) << "\n";
+  builder << fmt("9", 105) << "\n";
+
+  //                               "123456789"
+  constexpr std::string_view ref = "     +105\n"
+                                   "     -105\n"
+                                   "      105\n";
+  REQUIRE(builder.as_string_view() == ref);
+}
+
+
+
