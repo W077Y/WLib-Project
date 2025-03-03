@@ -224,6 +224,3 @@ TEST_CASE()
                                    "      105\n";
   REQUIRE(builder.as_string_view() == ref);
 }
-
-
-
